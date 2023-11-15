@@ -1,0 +1,101 @@
+title: "p8105_hw5_yb2591"
+author: "Yige Bian (yb2591)"
+date: "2023-11-15"
+output: github_document
+---
+
+```{r setup, include = FALSE}
+Sys.setenv(LANG = "en_US")
+library(tidyverse)
+library(readxl)
+library(ggridges)
+library(patchwork)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 1
+```{r}
+homicide_data = read_csv("./data/homicide-data.csv") |> 
+  janitor::clean_names()
+
+homicide_data
+```
+The raw data `homicide_data` gathered data on homicides in 50 large U.S. cities and contains 52179 observations and 12 variables. Varaibles include date, information of location and victims.
+
+```{r}
+# Create "city_state" and summarize
+homicide_data =
+homicide_data |>
+  mutate(city_state = str_c(city,state,sep = ", "))
+
+city_state_sum = homicide_data |>
+  group_by(city_state) |>
+  summarize(
+    all_homicides = n(),
+    unsolved_homicides = sum(disposition %in% c("Closed without arrest","Open/No arrest")))
+
+city_state_sum
+```
+
+```{r}
+bal_MD = city_state_sum |>
+  filter(city_state == "Baltimore, MD")
+
+bal_proptest = prop.test(
+    x = pull(bal_MD, unsolved_homicides),
+    n = pull(bal_MD, all_homicides)) |>
+  broom::tidy()
+
+bal_proptest |>
+  select(estimate,conf.low, conf.high)
+```
+The estimated proportion of unsolved homicides in Baltimore, MD is `r pull(bal_proptest, estimate)`. The confidence interval is (`r pull(bal_proptest, conf.low)`, `r pull(bal_proptest, conf.high)`)
+
+```{r}
+# prop.test for all cities
+all_city_proptest = city_state_sum |> 
+  mutate(
+    all_proptest = 
+      map2(
+        unsolved_homicides, all_homicides, \
+        (un, all) prop.test(x = un,n = all)),
+      tidy_proptest = map(all_proptest, broom::tidy)) |> 
+  unnest(tidy_proptest) |> 
+  select(city_state,estimate,conf.low, conf.high)
+
+all_city_proptest
+```
+```{r}
+# Plot to show the eatimates and Cls for each city
+all_city_proptest |> 
+  ggplot(aes(x=reorder(city_state,-estimate), y=estimate))+
+  geom_point()+
+  geom_errorbar(
+    aes(
+      ymin= conf.low,
+      ymax= conf.high))+
+  coord_flip()+
+  labs(
+    title= "Proportion of unsolved homicides in each city",
+    x="City",
+    y="Estimated proportion of unsolved homicides")
+
+```
+

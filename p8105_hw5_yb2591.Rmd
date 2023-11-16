@@ -141,4 +141,91 @@ tidy_p2_df |>
 ```
 The plot shows that observations in control arm have comparatively stable fluctuations, while observations in experimental arm have obvious increase from week 1 to week 8 
 
+## Problem 3
+```{r}
+# fix sample size and sigma, set the seed
+n = 30
+sigma = 5
+set.seed(1)
+```
 
+```{r}
+# write the function to give mu_hat and p value
+sim_mean_p = function(n, mu, sigma) {
+  
+  sim_data = rnorm(n, mean = mu, sd = sigma)
+
+  result = tibble(
+    mu_hat = mean(sim_data),
+    p_value = pull(broom::tidy(t.test(sim_data, alternative = "two.sided", mu= 0, config.level = 0.95)),p.value)
+  )}
+```
+
+```{r}
+sim_results_df = 
+  expand_grid(
+    iter = 1:5000
+  ) |> 
+  mutate(
+    estimate_df = map(1:5000, \(i) sim_mean_p(n, 0, sig))
+  ) |> 
+  unnest(estimate_df)
+sim_results_df
+```
+```{r}
+sim_allmu_results_df = 
+  expand_grid(
+    mu = c(1, 2, 3, 4, 5, 6),
+    iter = 1:5000
+    ) |> 
+  mutate(
+    estimate_df = map(mu, \(m) sim_mean_p(n, m, sig))
+  ) |> 
+  unnest(estimate_df)
+
+sim_allmu_results_df
+```
+```{r}
+sim_allmu_results_df |>
+  mutate(if_rejected = p_value < 0.05) |>
+  group_by(mu) |>
+  summarize(total_rej = sum(if_rejected)) |>
+  mutate(rej_prop = total_rej/5000) |>
+  ggplot(aes(x = mu, y = rej_prop)) +
+  geom_point() +
+  labs(
+    title="Power of test for each mu",
+    x="True value of mu",
+    y="Proportion of times H0 was rejected"
+    )
+```
+
+```{r}
+ave_mu_hat_all = sim_allmu_results_df |>
+  group_by(mu) |>
+  summarize(ave_mu_hat = mean(mu_hat))
+
+ave_mu_hat_rej = sim_allmu_results_df |>
+  filter(p_value < 0.05) |>
+  group_by(mu) |>
+  summarize(ave_mu_hat_rej = mean(mu_hat))
+
+ave_mu_hat = left_join(ave_mu_hat_all, ave_mu_hat_rej, by = "mu")
+
+ave_mu_hat |>
+  pivot_longer(
+    ave_mu_hat:ave_mu_hat_rej,
+    names_to = "group",
+    values_to = "mean") |>
+  ggplot(aes(x = mu, y = mean, color = group)) + geom_point() +
+  geom_line() +
+  labs(
+    title="Comparison of average estimated mu in all and rejected samples",
+    x="True value of mu",
+    y="Average estimated mu"
+    ) 
+```
+
+The plot show the average estimate of mu_hat and the true value of mu for all samples and samples which null hypothesis was rejected.
+
+We observed that the average estimated mean is larger in samples for which the null was rejected, this happened because sample means tend to be larger to be rejected, so when we consider samples for which the null was rejected, the average estimate of mu_hat tend to be larger.

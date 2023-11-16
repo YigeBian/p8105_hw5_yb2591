@@ -85,17 +85,60 @@ all_city_proptest
 ```{r}
 # Plot to show the eatimates and Cls for each city
 all_city_proptest |> 
-  ggplot(aes(x=reorder(city_state,-estimate), y=estimate))+
+  ggplot(aes(x = reorder(city_state,-estimate), y = estimate))+
   geom_point()+
   geom_errorbar(
     aes(
-      ymin= conf.low,
-      ymax= conf.high))+
+      ymin = conf.low,
+      ymax = conf.high))+
   coord_flip()+
   labs(
-    title= "Proportion of unsolved homicides in each city",
-    x="City",
-    y="Estimated proportion of unsolved homicides")
+    title = "Proportion of unsolved homicides in each city",
+    x = "City",
+    y = "Estimated proportion of unsolved homicides")
 
 ```
+
+## Problem 2
+```{r}
+# read data for problem2
+p2_df = tibble(file = list.files(path = "data/p2_data", full.names = TRUE, pattern=".csv"))
+
+p2_df = p2_df |>
+  mutate(data = map(file, read.csv))
+
+p2_df
+```
+
+```{r}
+# clean and tidy the df
+tidy_p2_df = p2_df |>
+  mutate(
+    file = gsub('data/p2_data/', '', file),
+    file = gsub('.csv', '', file)) |>
+  separate(col = file, into = c('arm', 'subject_id'), sep = '_') |>
+  unnest(data) |>
+  pivot_longer(
+    cols = starts_with("week"),
+    names_to = "week",
+    values_to = "data") |>
+  mutate(week = as.numeric(gsub('week_', '', week)))
+
+tidy_p2_df
+```
+
+```{r}
+# plot spaghetti
+tidy_p2_df |> 
+  ggplot(aes(x=week, y=data, color=subject_id)) +
+  geom_line()+
+  facet_grid(~arm)+
+  labs(
+    title="Observations on each subject over 8 weeks",
+    x="Week",
+    y="Observations"
+    )
+```
+The plot shows that observations in control arm have comparatively stable fluctuations, while observations in experimental arm have obvious increase from week 1 to week 8 
+
 

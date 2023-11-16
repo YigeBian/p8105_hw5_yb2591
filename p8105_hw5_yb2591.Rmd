@@ -1,3 +1,4 @@
+---
 title: "p8105_hw5_yb2591"
 author: "Yige Bian (yb2591)"
 date: "2023-11-15"
@@ -37,8 +38,9 @@ homicide_data = read_csv("./data/homicide-data.csv") |>
 
 homicide_data
 ```
-The raw data `homicide_data` gathered data on homicides in 50 large U.S. cities and contains 52179 observations and 12 variables. Varaibles include date, information of location and victims.
+The raw data `homicide_data` gathered data on homicides in 50 large U.S. cities and contains 52179 observations and 12 variables. Variables include date, information of location and victims.
 
+The following table shows the total number of homicide and unsolved number of homicide in 51 cities
 ```{r}
 # Create "city_state" and summarize
 homicide_data =
@@ -68,6 +70,7 @@ bal_proptest |>
 ```
 The estimated proportion of unsolved homicides in Baltimore, MD is `r pull(bal_proptest, estimate)`. The confidence interval is (`r pull(bal_proptest, conf.low)`, `r pull(bal_proptest, conf.high)`)
 
+The following table shows the proportion of unsolved homicides and confidence intervals for each city
 ```{r}
 # prop.test for all cities
 all_city_proptest = city_state_sum |> 
@@ -98,6 +101,7 @@ all_city_proptest |>
     y = "Estimated proportion of unsolved homicides")
 
 ```
+The plot above shows the estimates and CIs for each city, Tulsa, AL has the lowest estimate and the Chicago, IL has the highers estimate.
 
 ## Problem 2
 ```{r}
@@ -139,7 +143,7 @@ tidy_p2_df |>
     y="Observations"
     )
 ```
-The plot shows that observations in control arm have comparatively stable fluctuations, while observations in experimental arm have obvious increase from week 1 to week 8 
+The plot shows that observations in control arm have comparatively stable fluctuations, while observations in experimental arm have obvious increase from week 1 to week 8.
 
 ## Problem 3
 ```{r}
@@ -161,17 +165,20 @@ sim_mean_p = function(n, mu, sigma) {
   )}
 ```
 
+The following table shows the mu_hat and p_value for 5000 iterated datasets of the model with mean of 0.
 ```{r}
 sim_results_df = 
   expand_grid(
     iter = 1:5000
   ) |> 
   mutate(
-    estimate_df = map(1:5000, \(i) sim_mean_p(n, 0, sig))
+    estimate_df = map(1:5000, \(i) sim_mean_p(n, 0, sigma))
   ) |> 
   unnest(estimate_df)
 sim_results_df
 ```
+
+The following table shows the mu_hat and p_value for 30000 iterated datasets (5000 for each value of mu) of the model with mean of 1, 2, 3, 4, 5, 6.
 ```{r}
 sim_allmu_results_df = 
   expand_grid(
@@ -179,7 +186,7 @@ sim_allmu_results_df =
     iter = 1:5000
     ) |> 
   mutate(
-    estimate_df = map(mu, \(m) sim_mean_p(n, m, sig))
+    estimate_df = map(mu, \(m) sim_mean_p(n, m, sigma))
   ) |> 
   unnest(estimate_df)
 
@@ -193,12 +200,14 @@ sim_allmu_results_df |>
   mutate(rej_prop = total_rej/5000) |>
   ggplot(aes(x = mu, y = rej_prop)) +
   geom_point() +
+  geom_line() +
   labs(
     title="Power of test for each mu",
     x="True value of mu",
     y="Proportion of times H0 was rejected"
     )
 ```
+The plot shows that the power of test increases as the increase of true value of mu.
 
 ```{r}
 ave_mu_hat_all = sim_allmu_results_df |>
